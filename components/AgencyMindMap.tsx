@@ -1,5 +1,7 @@
 'use client';
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+import type { ReactNode, FC } from 'react';
+
 import {
   Search,
   Copy,
@@ -33,7 +35,6 @@ import {
 import { Separator } from './ui/separator';
 
 // 🔥 Firestore (usamos apenas o DB; sem login Google)
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import type { DocumentReference, DocumentData } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { DocumentReference, DocumentData } from 'firebase/firestore';
@@ -129,7 +130,7 @@ type NodeItem = {
 /* =========================================
    ICON MAP
    ========================================= */
-const ICONS: Record<string, React.ReactNode> = {
+const ICONS: Record<string, ReactNode> = {
   target: <Target size={16} />,
   money: <DollarSign size={16} />,
   os: <Cog size={16} />,
@@ -202,7 +203,7 @@ const TERMS_REGEX = new RegExp(
   'gi'
 );
 
-const GlossaryTerm: React.FC<{ term: string }> = ({ term }) => {
+const GlossaryTerm: FC<{ term: string }> = ({ term }) => {
   const def = GLOSSARY[term.toUpperCase()] || GLOSSARY[term];
   if (!def) return <>{term}</>;
   return (
@@ -239,9 +240,9 @@ const GlossaryTerm: React.FC<{ term: string }> = ({ term }) => {
   );
 };
 
-function renderWithGlossary(text?: string): React.ReactNode {
+function renderWithGlossary(text?: string): ReactNode {
   if (!text) return null;
-  const parts: React.ReactNode[] = [];
+  const parts: ReactNode[] = [];
   let last = 0;
   text.replace(TERMS_REGEX, (match, _g, offset: number) => {
     if (last < offset) parts.push(text.slice(last, offset));
@@ -1743,6 +1744,7 @@ useEffect(() => {
     </div>
   );
 }
+
 
 
 
