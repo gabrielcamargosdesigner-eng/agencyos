@@ -1,9 +1,16 @@
+// components/AgencyMindMap.tsx
 'use client';
-import { useMemo, useState, useEffect, useCallback } from 'react';
-import type { ReactNode, FC } from 'react';
-
+import React, {
+  useMemo,
+  useState,
+  useEffect,
+  useCallback,
+  type FC,
+  type ReactNode,
+} from 'react';
 import {
   Search,
+  Download,
   Copy,
   Layers,
   CheckCircle2,
@@ -34,11 +41,15 @@ import {
 } from './ui/tooltip';
 import { Separator } from './ui/separator';
 
-// 🔥 Firestore (usamos apenas o DB; sem login Google)
-import type { DocumentReference, DocumentData } from 'firebase/firestore';
+/** 🔥 Firestore: importe TUDO uma única vez (sem duplicatas) */
+import {
+  doc,
+  onSnapshot,
+  setDoc,
+  type DocumentReference,
+  type DocumentData,
+} from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import type { DocumentReference, DocumentData } from 'firebase/firestore';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 /* =========================================
    THEME (dark + contraste)
@@ -259,7 +270,6 @@ function renderWithGlossary(text?: string): ReactNode {
    ========================================= */
 //  ⚠️  >>>>>>>  MANTIVE 100% DOS BLOCOS QUE JÁ CRIAMOS  <<<<<<< ⚠️
 //  Para caber aqui, mantive exatamente o mesmo DATA da sua última versão.
-//  (Se você não vê-lo na tela é porque o gate por código ainda não foi destravado.)
 
 const DATA: NodeItem[] = [
   // --- Direção Estratégica ---
@@ -994,7 +1004,7 @@ function Node({
             {iconEl}
           </div>
 
-          <div className="flex-1">
+        <div className="flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h3
                 className="font-semibold text-lg"
@@ -1369,64 +1379,54 @@ export default function AgencyMindMap() {
   }, [commentsMap]);
 
   // Expandir/Recolher global
-const setAll = useCallback((collapsed: boolean) => {
-  const map: Record<string, boolean> = {};
-  const walk = (items: NodeItem[]) => {
-    for (const it of items) {
-      map[it.id] = collapsed;
-      if (it.children) walk(it.children);
-    }
-  };
-  walk(DATA);
-  setCollapsedMap(map);
-}, []);
+  const setAll = useCallback((collapsed: boolean) => {
+    const map: Record<string, boolean> = {};
+    const walk = (items: NodeItem[]) => {
+      for (const it of items) {
+        map[it.id] = collapsed;
+        if (it.children) walk(it.children);
+      }
+    };
+    walk(DATA);
+    setCollapsedMap(map);
+  }, []);
 
+  // Firestore — leitura/gravação em tempo real (usa a constante definida acima)
+  const stateDoc: DocumentReference<DocumentData> | null = useMemo(
+    () => (db ? doc(db, ...STATE_DOC_PATH) : null),
+    [db, STATE_DOC_PATH]
+  );
 
- // Firestore — leitura/gravação em tempo real (somente se Firestore estiver configurado)
-const STATE_DOC_PATH = ['workspaces', 'synth', 'states', 'default'] as const;
+  // --- LEITURA EM TEMPO REAL ---
+  useEffect(() => {
+    if (!access.granted || !stateDoc) return; // sem Firestore ou sem acesso -> sai
 
-// eslint-disable-next-line react-hooks/exhaustive-deps
-const stateDoc: DocumentReference<DocumentData> | null = useMemo(
-  () => (db ? doc(db, ...STATE_DOC_PATH) : null),
-  []
-);
+    return onSnapshot(stateDoc, (snap) => {
+      const d = snap.data() || {};
+      if (d.checkedMap) setCheckedMap(d.checkedMap);
+      if (d.commentsMap) setCommentsMap(d.commentsMap);
+    });
+  }, [access.granted, stateDoc]);
 
-// [ ] STATE_DOC_PATH é constante; manter deps vazias aqui evita warning chato no Vercel
+  // --- GRAVAÇÃO COM DEBOUNCE ---
+  useEffect(() => {
+    if (!access.granted || !stateDoc) return; // sem Firestore ou sem acesso -> não grava
 
+    const t = setTimeout(() => {
+      setDoc(
+        stateDoc,
+        {
+          checkedMap,
+          commentsMap,
+          updatedAt: Date.now(),
+          updatedBy: 'codigo-secreto', // sem identidade pessoal
+        },
+        { merge: true }
+      );
+    }, 300);
 
-// --- LEITURA EM TEMPO REAL ---
-useEffect(() => {
-  if (!access.granted || !stateDoc) return; // sem Firestore ou sem acesso -> sai
-
-  return onSnapshot(stateDoc, (snap) => {
-    const d = snap.data() || {};
-    if (d.checkedMap) setCheckedMap(d.checkedMap);
-    if (d.commentsMap) setCommentsMap(d.commentsMap);
-  });
-}, [access.granted, stateDoc]);
-
-// --- GRAVAÇÃO COM DEBOUNCE ---
-useEffect(() => {
-  if (!access.granted || !stateDoc) return; // sem Firestore ou sem acesso -> não grava
-
-  const t = setTimeout(() => {
-    setDoc(
-      stateDoc,
-      {
-        checkedMap,
-        commentsMap,
-        updatedAt: Date.now(),
-        updatedBy: 'codigo-secreto', // sem identidade pessoal
-      },
-      { merge: true }
-    );
-  }, 300);
-
-  return () => clearTimeout(t);
-}, [checkedMap, commentsMap, access.granted, stateDoc]);
-
-
-// ---- (continua o arquivo normalmente abaixo) ----
+    return () => clearTimeout(t);
+  }, [checkedMap, commentsMap, access.granted, stateDoc]);
 
   const flat = useMemo(() => flatten(DATA), []);
   const total = flat.length;
@@ -1744,8 +1744,3 @@ useEffect(() => {
     </div>
   );
 }
-
-
-
-
-
