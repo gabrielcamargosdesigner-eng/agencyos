@@ -34,6 +34,7 @@ import { Separator } from './ui/separator';
 
 // 🔥 Firestore (usamos apenas o DB; sem login Google)
 import { db } from '../lib/firebase';
+import type { DocumentReference, DocumentData } from 'firebase/firestore';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 /* =========================================
@@ -1724,3 +1725,4 @@ export default function AgencyMindMap() {
     </div>
   );
 }
+
