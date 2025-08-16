@@ -1,5 +1,5 @@
 'use client';
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   Search,
   Copy,
@@ -33,6 +33,8 @@ import {
 import { Separator } from './ui/separator';
 
 // 🔥 Firestore (usamos apenas o DB; sem login Google)
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import type { DocumentReference, DocumentData } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { DocumentReference, DocumentData } from 'firebase/firestore';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
@@ -1365,14 +1367,31 @@ export default function AgencyMindMap() {
     localStorage.setItem('commentsMap', JSON.stringify(commentsMap));
   }, [commentsMap]);
 
+  // Expandir/Recolher global
+const setAll = useCallback((collapsed: boolean) => {
+  const map: Record<string, boolean> = {};
+  const walk = (items: NodeItem[]) => {
+    for (const it of items) {
+      map[it.id] = collapsed;
+      if (it.children) walk(it.children);
+    }
+  };
+  walk(DATA);
+  setCollapsedMap(map);
+}, []);
+
+
  // Firestore — leitura/gravação em tempo real (somente se Firestore estiver configurado)
 const STATE_DOC_PATH = ['workspaces', 'synth', 'states', 'default'] as const;
 
-// `db` pode ser null em produção sem Firebase; protegemos o tipo.
+// eslint-disable-next-line react-hooks/exhaustive-deps
 const stateDoc: DocumentReference<DocumentData> | null = useMemo(
   () => (db ? doc(db, ...STATE_DOC_PATH) : null),
-  [db]
+  []
 );
+
+// [ ] STATE_DOC_PATH é constante; manter deps vazias aqui evita warning chato no Vercel
+
 
 // --- LEITURA EM TEMPO REAL ---
 useEffect(() => {
@@ -1404,6 +1423,7 @@ useEffect(() => {
 
   return () => clearTimeout(t);
 }, [checkedMap, commentsMap, access.granted, stateDoc]);
+
 
 // ---- (continua o arquivo normalmente abaixo) ----
 
@@ -1723,5 +1743,6 @@ useEffect(() => {
     </div>
   );
 }
+
 
 
