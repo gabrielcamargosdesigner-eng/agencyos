@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ================== Theme (dark) ================== */
 :root {
   --bg: #142b2a;
   --surface: #1e403e;
@@ -10,5 +11,48 @@
   --accent: #ff6700;
 }
 
-html, body { height: 100%; }
-body { background: var(--bg); color: var(--text); }
+/* Reseta básico e fontes */
+html, body {
+  height: 100%;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Tooltips/espaços escuros para glossário */
+.tooltip-dark,
+[data-radix-popper-content-wrapper] .tooltip-dark {
+  background: #0f2221;
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+
+/* Cards e inputs (fallback visual) */
+.card-surface {
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+}
+.input-dark {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+/* Títulos */
+.h-title {
+  color: var(--title);
+}
+
+/* Acentos */
+.c-accent {
+  color: var(--accent);
+}
+.bg-accent {
+  background: var(--accent);
+}
