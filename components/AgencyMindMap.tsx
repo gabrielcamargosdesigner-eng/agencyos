@@ -1365,49 +1365,47 @@ export default function AgencyMindMap() {
     localStorage.setItem('commentsMap', JSON.stringify(commentsMap));
   }, [commentsMap]);
 
-  // Firestore — leitura em tempo real (apenas se acesso liberado)
-  const stateDoc = useMemo(() => doc(db, ...STATE_DOC_PATH), []);
-  useEffect(() => {
-    if (!access.granted) return;
-    return onSnapshot(stateDoc, (snap) => {
-      const d = snap.data() || {};
-      if (d.checkedMap) setCheckedMap(d.checkedMap);
-      if (d.commentsMap) setCommentsMap(d.commentsMap);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [access.granted]);
+ // Firestore — leitura/gravação em tempo real (somente se Firestore estiver configurado)
+const STATE_DOC_PATH = ['workspaces', 'synth', 'states', 'default'] as const;
 
-  // Gravação com debounce (compartilhado)
-  useEffect(() => {
-    if (!access.granted) return;
-    const t = setTimeout(() => {
-      setDoc(
-        stateDoc,
-        {
-          checkedMap,
-          commentsMap,
-          updatedAt: Date.now(),
-          updatedBy: access.label || 'acesso',
-        },
-        { merge: true }
-      );
-    }, 300);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [checkedMap, commentsMap, access.granted, access.label]);
+// `db` pode ser null em produção sem Firebase; protegemos o tipo.
+const stateDoc: DocumentReference<DocumentData> | null = useMemo(
+  () => (db ? doc(db, ...STATE_DOC_PATH) : null),
+  [db]
+);
 
-  // Expandir/Recolher global
-  const setAll = (collapsed: boolean) => {
-    const map: Record<string, boolean> = {};
-    const walk = (items: NodeItem[]) => {
-      for (const it of items) {
-        map[it.id] = collapsed;
-        if (it.children) walk(it.children);
-      }
-    };
-    walk(DATA);
-    setCollapsedMap(map);
-  };
+// --- LEITURA EM TEMPO REAL ---
+useEffect(() => {
+  if (!access.granted || !stateDoc) return; // sem Firestore ou sem acesso -> sai
+
+  return onSnapshot(stateDoc, (snap) => {
+    const d = snap.data() || {};
+    if (d.checkedMap) setCheckedMap(d.checkedMap);
+    if (d.commentsMap) setCommentsMap(d.commentsMap);
+  });
+}, [access.granted, stateDoc]);
+
+// --- GRAVAÇÃO COM DEBOUNCE ---
+useEffect(() => {
+  if (!access.granted || !stateDoc) return; // sem Firestore ou sem acesso -> não grava
+
+  const t = setTimeout(() => {
+    setDoc(
+      stateDoc,
+      {
+        checkedMap,
+        commentsMap,
+        updatedAt: Date.now(),
+        updatedBy: 'codigo-secreto', // sem identidade pessoal
+      },
+      { merge: true }
+    );
+  }, 300);
+
+  return () => clearTimeout(t);
+}, [checkedMap, commentsMap, access.granted, stateDoc]);
+
+// ---- (continua o arquivo normalmente abaixo) ----
 
   const flat = useMemo(() => flatten(DATA), []);
   const total = flat.length;
@@ -1725,4 +1723,5 @@ export default function AgencyMindMap() {
     </div>
   );
 }
+
 
