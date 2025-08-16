@@ -1392,10 +1392,13 @@ export default function AgencyMindMap() {
   }, []);
 
   // Firestore — leitura/gravação em tempo real (usa a constante definida acima)
-  const stateDoc: DocumentReference<DocumentData> | null = useMemo(
-    () => (db ? doc(db, ...STATE_DOC_PATH) : null),
-    [db, STATE_DOC_PATH]
-  );
+ // 'db' e STATE_DOC_PATH não mudam em runtime; memoize uma única vez
+// eslint-disable-next-line react-hooks/exhaustive-deps
+const stateDoc: DocumentReference<DocumentData> | null = useMemo(
+  () => (db ? doc(db, ...STATE_DOC_PATH) : null),
+  []
+);
+
 
   // --- LEITURA EM TEMPO REAL ---
   useEffect(() => {
@@ -1744,3 +1747,4 @@ export default function AgencyMindMap() {
     </div>
   );
 }
+
